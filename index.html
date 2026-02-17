@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Movie</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<style>
+    body {
+    font-family: sans-serif;
+    background: white;
+    color: white;
+    margin: 0;
+}
+nav {
+    display: flex;
+    justify-content: center;
+    padding: 20px;
+    background: white;
+    gap: 15px;
+}
+button {
+    padding: 10px 20px; 
+    cursor: pointer;
+    border: none;
+    border-radius: 5px;
+    background: hsl(0, 0%, 0%);
+    color: white;
+    transition: 0.3s;
+}
+button:hover {
+    background: #b20710;
+}
+
+#search-bar {
+    text-align: center;
+    padding: 20px;
+}
+#search-bar input { 
+    padding: 10px; 
+    width: 300px; 
+    border-radius: 5px; 
+    border: none; }
+
+#movie-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 20px;
+    padding: 20px;
+}
+
+.movie-card {
+    background: white;
+    border-radius: 10px;
+    overflow: hidden;
+    position: relative;
+    transition: transform 0.3s;
+}
+.movie-card:hover {
+    transform: scale(1.03);
+}
+.movie-card img {
+    width: 100%;
+    display: block;
+}
+
+.movie-info {
+    padding: 15px;
+}
+.movie-info h3 {
+    margin: 0 0 10px;
+    font-size: 1.1rem;
+}
+.movie-info p {
+    font-size: 0.85rem;
+    color: black;
+    margin: 5px 0;
+}
+
+.fav-btn {
+    width: 100%;
+    background: #444;
+    margin-top: 10px;
+}
+.hidden {
+    display: none;
+}
+</style>
+<body>
+    <nav>
+        <button onclick="showPage('upcoming')">Предстоящие</button>
+        <button onclick="showPage('search')">Поиск</button>
+        <button onclick="showPage('favorites')">Избранное</button>
+    </nav>
+
+    <div id="search-bar" class="hidden">
+        <input type="text" id="query" placeholder="Введите название фильма...">
+        <button onclick="searchMovies()">Найти</button>
+    </div>
+
+    <main id="movie-grid"></main>
+    <script>
+        const API_KEY = '4d7fb5f83ae091c2f273e27b02e26c91';
+const BASE_URL = 'https://api.themoviedb.org/3';
+const IMG_URL = 'https://image.tmdb.org/t/p/w500';
+
+var favorites = [];
+
+async function getActors(movieId) {
+    var address = BASE_URL + '/movie/' + movieId + '/credits?api_key=' + API_KEY;
+    var response = await fetch(address);
+    var data = await response.json();
+    
+    var allActors = data.cast;
+    var result = "";
+
+    for (var i = 0; i < 3; i++) {
+        if (allActors[i]) {
+            result = result + allActors[i].name + ", ";
+        }
+    }
+    return result;
+}
+
+async function renderMovies(url) {
+    var response = await fetch(url);
+    var data = await response.json();
+    var grid = document.getElementById('movie-grid');
+
+    grid.innerHTML = "";
+
+    var moviesList = data.results;
+
+    for (var i = 0; i < moviesList.length; i++) {
+        var movie = moviesList[i];
+
+        var actorsNames = await getActors(movie.id);
+
+        var cleanTitle = movie.title.replaceAll("'", "");
+
+        var card = document.createElement('div');
+        card.className = 'movie-card';
+
+        card.innerHTML = `
+            <img src="${IMG_URL + movie.poster_path}">
+            <div class="movie-info">
+                <h3>${movie.title}</h3>
+                <p><b>Дата выхода:</b> ${movie.release_date}</p>
+                <p><b>Актеры:</b> ${actorsNames}</p>
+                <button onclick="addToFavorites(${movie.id}, '${cleanTitle}', '${movie.poster_path}')">
+                    В избранное
+                </button>
+            </div>
+        `;
+        grid.appendChild(card);
+    }
+}
+
+function searchMovies() {
+    var input = document.getElementById('query');
+    var text = input.value;
+    var searchUrl = BASE_URL + '/search/movie?api_key=' + API_KEY + '&query=' + text + '&language=ru-RU';
+    
+    renderMovies(searchUrl);
+}
+
+function showPage(name) {
+    var searchBar = document.getElementById('search-bar');
+    var grid = document.getElementById('movie-grid');
+
+    if (name == 'upcoming') {
+        searchBar.style.display = "none";
+        var url = BASE_URL + '/movie/upcoming?api_key=' + API_KEY + '&language=ru-RU';
+        renderMovies(url);
+    }
+
+    if (name == 'search') {
+        searchBar.style.display = "block";
+        grid.innerHTML = "Введите название...";
+    }
+
+    if (name == 'favorites') {
+        searchBar.style.display = "none";
+        renderFavorites();
+    }
+}
+
+function addToFavorites(id, title, path) {
+    var movie = { id: id, title: title, poster_path: path };
+
+    favorites.push(movie);
+
+    alert("Добавлено!");
+}
+
+function renderFavorites() {
+    var grid = document.getElementById('movie-grid');
+    grid.innerHTML = "";
+
+    if (favorites.length == 0) {
+        grid.innerHTML = "У вас пока нет любимых фильмов";
+    }
+
+    for (var i = 0; i < favorites.length; i++) {
+        var movie = favorites[i];
+        var card = document.createElement('div');
+        card.className = 'movie-card';
+        card.innerHTML = `
+            <img src="${IMG_URL + movie.poster_path}">
+            <div class="movie-info">
+                <h3>${movie.title}</h3>
+            </div>
+        `;
+        grid.appendChild(card);
+    }
+}
+
+showPage('upcoming');
+    </script>
+</body>
+</html>
